@@ -93,7 +93,13 @@ public class test extends Application {
 				//Here's the basic code you need to update an image
 				TopView.setImage(null); //clear the old image
 		        Image newImage = GetSlice(); //go get the slice image
-				Image thenewImage = resize(szslider.getValue(), newImage);
+				Image thenewImage;
+				if (rb1.isSelected()){
+					thenewImage = resize(szslider.getValue(), newImage);
+				}
+				else{
+					thenewImage = resize(szslider.getValue(), newImage);
+				}
 				TopView.setImage(thenewImage); //Update the GUI so the new image is displayed
             } 
         });
@@ -170,20 +176,20 @@ public class test extends Application {
 		WritableImage image = new WritableImage(256, 256);
 		//Find the width and height of the image to be process
 		int width = (int)image.getWidth();
-				int height = (int)image.getHeight();
-				float val;
+		int height = (int)image.getHeight();
+		float val;
 		//Get an interface to write to that image memory
 		PixelWriter image_writer = image.getPixelWriter();
 		//Iterate over all pixels
 		for(int y = 0; y < height; y++) {
-		for(int x = 0; x < width; x++) {
+			for(int x = 0; x < width; x++) {
 		//For each pixel, get the colour from the cthead slice 76
-		val=grey[76][y][x];
-		Color color=Color.color(val,val,val);
+				val=grey[76][y][x];
+				Color color=Color.color(val,val,val);
 		//Apply the new colour
-		image_writer.setColor(x, y, color);
-		}
-		}
+				image_writer.setColor(x, y, color);
+				}
+			}
 		return image;
 		}
 	
@@ -215,7 +221,34 @@ public class test extends Application {
 				}
 				return newImage;
 			}
+			public Image bilinear(double value, Image oldImage){
+				WritableImage newImage = new WritableImage((int) value, (int) value);
+					//Find the width and height of the image to be process
+					float oldWidth = (int)oldImage.getWidth();
+					float oldHeight = (int)oldImage.getHeight();
+					float newWidth = (int) value;
+					float newHeight = (int) value;
+					float val;
 			
+					//Get an interface to write to that image memory
+					PixelWriter image_writer = newImage.getPixelWriter();
+			
+					//Iterate over all pixels
+					for(int j = 0; j < newWidth; j++) {
+						for(int i = 0; i < newHeight; i++) {
+							//For each pixel, get the colour from the cthead slice 76
+			
+							int x = (int) (j * oldWidth/newWidth);
+							int y = (int) (i * oldHeight/newHeight);
+							val=grey[76][y][x];
+							Color color=Color.color(val,val,val);
+							
+							//Apply the new colour
+							image_writer.setColor(j, i, color);
+						}
+					}
+					return newImage;
+				}		
 			
 		
 
