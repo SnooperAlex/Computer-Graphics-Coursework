@@ -38,6 +38,8 @@ public class test extends Application {
 	float grey[][][]; //store the 3D volume data set converted to 0-1 ready to copy to the image
 	short min, max; //min/max value in the 3D volume data set
 	ImageView TopView;
+	int currentNum = 76;
+	double currentSize;
 
     @Override
     public void start(Stage stage) throws FileNotFoundException {
@@ -94,13 +96,15 @@ public class test extends Application {
 				TopView.setImage(null); //clear the old image
 		        Image newImage = GetSlice(); //go get the slice image
 				Image thenewImage;
+				currentSize = szslider.getValue();
 				if (rb1.isSelected()){
-					thenewImage = resize(szslider.getValue(), newImage);
+					thenewImage = resize(currentSize, newImage);
 				}
 				else{
-					thenewImage = resize(szslider.getValue(), newImage);
+					thenewImage = bilinear(currentSize, newImage);
 				}
 				TopView.setImage(thenewImage); //Update the GUI so the new image is displayed
+				
             } 
         });
 		
@@ -212,16 +216,17 @@ public class test extends Application {
 		
 						int x = (int) (j * oldWidth/newWidth);
 						int y = (int) (i * oldHeight/newHeight);
-						val=grey[76][y][x];
+						val=grey[getNum()][y][x];
 						Color color=Color.color(val,val,val);
 						
 						//Apply the new colour
 						image_writer.setColor(j, i, color);
 					}
 				}
+				System.out.println(getNum());
 				return newImage;
 			}
-			public Image bilinear(double value, Image oldImage){
+		public Image bilinear(double value, Image oldImage){
 				WritableImage newImage = new WritableImage((int) value, (int) value);
 					//Find the width and height of the image to be process
 					float oldWidth = (int)oldImage.getWidth();
@@ -229,7 +234,10 @@ public class test extends Application {
 					float newWidth = (int) value;
 					float newHeight = (int) value;
 					float val;
-			
+					float val2;
+					float val3;
+					float val4;
+								
 					//Get an interface to write to that image memory
 					PixelWriter image_writer = newImage.getPixelWriter();
 			
@@ -237,10 +245,12 @@ public class test extends Application {
 					for(int j = 0; j < newWidth; j++) {
 						for(int i = 0; i < newHeight; i++) {
 							//For each pixel, get the colour from the cthead slice 76
-			
-							int x = (int) (j * oldWidth/newWidth);
-							int y = (int) (i * oldHeight/newHeight);
-							val=grey[76][y][x];
+							val= grey[76][j][i];
+							val2 = grey[76][j][i+1];
+							val3 = grey[76][j+1][i];
+							val4 = grey[76][j+1][i+1];
+
+							float v = val + (val2 - val);
 							Color color=Color.color(val,val,val);
 							
 							//Apply the new colour
@@ -250,25 +260,79 @@ public class test extends Application {
 					return newImage;
 				}		
 			
+	
+	public Image gammaChange(double value, Image oldImage){
+			WritableImage newImage = new WritableImage((int) value, (int) value);
+				//Find the width and height of the image to be process
+				float oldWidth = (int)oldImage.getWidth();
+			    float oldHeight = (int)oldImage.getHeight();
+				float newWidth = (int) value;
+				float newHeight = (int) value;
+			    float val;
 		
-
+				//Get an interface to write to that image memory
+				PixelWriter image_writer = newImage.getPixelWriter();
+		
+				//Iterate over all pixels
+				for(int j = 0; j < newWidth; j++) {
+					for(int i = 0; i < newHeight; i++) {
+						//For each pixel, get the colour from the cthead slice 76
+		
+						int x = (int) (j * oldWidth/newWidth);
+						int y = (int) (i * oldHeight/newHeight);
+						val=grey[76][y][x];
+						Color color=Color.color(val,val,val);
+						
+						//Apply the new colour
+						image_writer.setColor(j, i, color);
+					}
+				}
+				return newImage;
+			}
 	
 	public void ThumbWindow(double atX, double atY) {
 		StackPane ThumbLayout = new StackPane();
 		
-		WritableImage thumb_image = new WritableImage(500, 500);
+		WritableImage thumb_image = new WritableImage(800, 800);
 		ImageView thumb_view = new ImageView(thumb_image);
 		ThumbLayout.getChildren().add(thumb_view);
+		float val;
 
 		{
 			//This bit of code makes a white image
 			PixelWriter image_writer = thumb_image.getPixelWriter();
-			Color color=Color.color(1,1,1);
+
 			for(int y = 0; y < thumb_image.getHeight(); y++) {
 				for(int x = 0; x < thumb_image.getWidth(); x++) {
+							Color color=Color.color(1,1,1);
+							//Apply the new colour
+							image_writer.setColor(x, y, color);
 					//Apply the new colour
-					image_writer.setColor(x, y, color);
+					
 				}
+			}
+			int nextX = 0;
+			int nextY = 0;
+			for(int slice = 0; slice < 113; slice++){
+				if (nextX >= 750){
+					nextX = 0;
+					nextY += 65;
+				}
+				for(int j = 0; j < 60; j++) {
+					for(int i = 0; i < 60; i++) {
+
+						int x = (int) (j * 256/60);
+						int y = (int) (i * 256/60);
+						val=grey[slice][y][x];
+						Color color=Color.color(val,val,val);
+						
+						//Apply the new colour
+						image_writer.setColor(j+nextX, i+nextY, color);
+						//Apply the new colour
+						
+					}
+				}				
+				nextX += 65;
 			}
 		}
 		
@@ -278,6 +342,13 @@ public class test extends Application {
 		thumb_view.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_MOVED, event -> {
 			System.out.println(event.getX()+"  "+event.getY());
 			event.consume();
+			int m = (int) ((event.getX() / 65 ));
+			int n = (int) ((event.getY() / 65 ));
+			int z = (int) (m + (n * 11 + n));
+			System.out.println(m + " "+ n);
+			setNum(z);
+			TopView.setImage(changeImage(z));
+			
 		});
 	
 		//Build and display the new window
@@ -291,7 +362,36 @@ public class test extends Application {
 	
 		newWindow.show();
 	}
+
+	public Image changeImage(int z) {
+		WritableImage image = new WritableImage(256, 256);
+		//Find the width and height of the image to be process
+		int width = (int)image.getWidth();
+		int height = (int)image.getHeight();
+		float val;
+		//Get an interface to write to that image memory
+		PixelWriter image_writer = image.getPixelWriter();
+		//Iterate over all pixels
+		for(int y = 0; y < height; y++) {
+			for(int x = 0; x < width; x++) {
+		//For each pixel, get the colour from the cthead slice 76
+				val=grey[z][y][x];
+				Color color=Color.color(val,val,val);
+		//Apply the new colour
+				image_writer.setColor(x, y, color);
+				}
+			}
+		return image;
+		}
 	
+		public void setNum(int currentNum){
+			this.currentNum = currentNum;
+		}
+
+		public int getNum(){
+			return currentNum;
+		}
+		
     public static void main(String[] args) {
         launch();
     }
