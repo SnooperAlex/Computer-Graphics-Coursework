@@ -39,7 +39,7 @@ public class test extends Application {
 	short min, max; //min/max value in the 3D volume data set
 	ImageView TopView;
 	int currentNum = 76;
-	double currentSize;
+	double currentSize = 256;
 
     @Override
     public void start(Stage stage) throws FileNotFoundException {
@@ -114,6 +114,11 @@ public class test extends Application {
 						observable, Number oldValue, Number newValue) { 
 
 				System.out.println(newValue.doubleValue());
+				Image currentImage = TopView.getImage();
+				Image newIamge;
+				newIamge = gammaChange(gamma_slider.getValue(), currentImage, currentSize);
+				TopView.setImage(newIamge);
+
 			}
 		});
 		
@@ -237,54 +242,60 @@ public class test extends Application {
 					float val2;
 					float val3;
 					float val4;
-								
+					float decimal = 0;		
 					//Get an interface to write to that image memory
 					PixelWriter image_writer = newImage.getPixelWriter();
 			
 					//Iterate over all pixels
-					for(int j = 0; j < newWidth; j++) {
-						for(int i = 0; i < newHeight; i++) {
-							//For each pixel, get the colour from the cthead slice 76
-							val= grey[76][j][i];
-							val2 = grey[76][j][i+1];
-							val3 = grey[76][j+1][i];
-							val4 = grey[76][j+1][i+1];
+					for(int j = 0; j < newWidth -1; j++) {
+						for(int i = 0; i < newHeight -1; i++) {
 
-							float v = val + (val2 - val);
-							Color color=Color.color(val,val,val);
-							
-							//Apply the new colour
-							image_writer.setColor(j, i, color);
-						}
+								
+
+								int x = (int) (j * oldWidth/newWidth);
+								int y = (int) (i * oldHeight/newHeight);
+
+								val= grey[76][x][y];
+								val2 = grey[76][x][y+1];
+								val3 = grey[76][x+1][y];
+								val4 = grey[76][x+1][y+1];
+
+								float v = val + (val2 - val)*(((x + decimal) - x)/(x+1-x));
+								Color color=Color.color(v, v, v);
+								
+								//Apply the new colour
+								image_writer.setColor(i, j, color);
+							}
+						
 					}
 					return newImage;
 				}		
 			
 	
-	public Image gammaChange(double value, Image oldImage){
-			WritableImage newImage = new WritableImage((int) value, (int) value);
+	public Image gammaChange(double value, Image Image, double size){
+			WritableImage newImage = new WritableImage((int) size, (int) size);
 				//Find the width and height of the image to be process
-				float oldWidth = (int)oldImage.getWidth();
-			    float oldHeight = (int)oldImage.getHeight();
-				float newWidth = (int) value;
-				float newHeight = (int) value;
+				float Width = (int)size;
+			    float Height = (int)size;
 			    float val;
 		
 				//Get an interface to write to that image memory
 				PixelWriter image_writer = newImage.getPixelWriter();
 		
 				//Iterate over all pixels
-				for(int j = 0; j < newWidth; j++) {
-					for(int i = 0; i < newHeight; i++) {
+				for(int y = 0; y < Width; y++) {
+					for(int x = 0; x < Height; x++) {
 						//For each pixel, get the colour from the cthead slice 76
-		
-						int x = (int) (j * oldWidth/newWidth);
-						int y = (int) (i * oldHeight/newHeight);
-						val=grey[76][y][x];
-						Color color=Color.color(val,val,val);
+
+						val = grey[76][y][x];
+
+						float power = (float) Math.pow(val, 1.0/value);
+			
+
+						Color color=Color.color(power, power, power);
 						
 						//Apply the new colour
-						image_writer.setColor(j, i, color);
+						image_writer.setColor(x, y, color);
 					}
 				}
 				return newImage;
