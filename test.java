@@ -40,6 +40,7 @@ public class test extends Application {
 	ImageView TopView;
 	int currentNum = 76;
 	double currentSize = 256;
+	double currentGamma = 1;
 
     @Override
     public void start(Stage stage) throws FileNotFoundException {
@@ -98,7 +99,7 @@ public class test extends Application {
 				Image thenewImage;
 				currentSize = szslider.getValue();
 				if (rb1.isSelected()){
-					thenewImage = resize(currentSize, newImage);
+					thenewImage = resize(currentSize, newImage, currentGamma);
 				}
 				else{
 					thenewImage = bilinear(currentSize, newImage);
@@ -111,14 +112,14 @@ public class test extends Application {
 		//Gamma value changes
 		gamma_slider.valueProperty().addListener(new ChangeListener<Number>() { 
 			public void changed(ObservableValue <? extends Number >  
-						observable, Number oldValue, Number newValue) { 
+						observable, Number oldValue, Number newValue) {  
 
 				System.out.println(newValue.doubleValue());
-				Image currentImage = TopView.getImage();
-				Image newIamge;
-				newIamge = gammaChange(gamma_slider.getValue(), currentImage, currentSize);
-				TopView.setImage(newIamge);
-
+				setGamma(gamma_slider.getValue());
+				Image newImage = TopView.getImage(); //go get the slice image
+				System.out.println(currentSize);
+				Image thenewImage = resize(currentSize, newImage, currentGamma);
+				TopView.setImage(thenewImage);
 			}
 		});
 		
@@ -202,7 +203,7 @@ public class test extends Application {
 		return image;
 		}
 	
-		public Image resize(double value, Image oldImage){
+		public Image resize(double value, Image oldImage, double gamma){
 			WritableImage newImage = new WritableImage((int) value, (int) value);
 				//Find the width and height of the image to be process
 				float oldWidth = (int)oldImage.getWidth();
@@ -222,7 +223,10 @@ public class test extends Application {
 						int x = (int) (j * oldWidth/newWidth);
 						int y = (int) (i * oldHeight/newHeight);
 						val=grey[getNum()][y][x];
-						Color color=Color.color(val,val,val);
+
+						float power = (float) Math.pow(val, 1.0/gamma);
+
+						Color color=Color.color(power,power,power);
 						
 						//Apply the new colour
 						image_writer.setColor(j, i, color);
@@ -401,6 +405,14 @@ public class test extends Application {
 
 		public int getNum(){
 			return currentNum;
+		}
+
+		public void setGamma(double d){
+			this.currentGamma = d;
+		}
+
+		public double getGamma(){
+			return currentGamma;
 		}
 		
     public static void main(String[] args) {
