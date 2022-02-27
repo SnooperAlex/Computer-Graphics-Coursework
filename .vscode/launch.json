@@ -10,6 +10,14 @@
             "request": "launch",
             "vmArgs": "--module-path C:/Users/AlexG/Desktop/javafx-sdk-17.0.1/lib --add-modules javafx.controls,javafx.fxml",
             "mainClass": "test",
+            "projectName": "Coputer-Graphics-Coursework_39a42ab4"
+        },
+        {
+            "type": "java",
+            "name": "Launch test",
+            "request": "launch",
+            "vmArgs": "--module-path C:/Users/AlexG/Desktop/javafx-sdk-17.0.1/lib --add-modules javafx.controls,javafx.fxml",
+            "mainClass": "test",
             "projectName": "Coputer-Graphics-Coursework_cbf95d9"
         },
         {
@@ -24,7 +32,6 @@
             "name": "Launch Current File",
             "request": "launch",
             "mainClass": "${file}"
-        },
-
+        }
     ]
 }
