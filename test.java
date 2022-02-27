@@ -251,24 +251,38 @@ public class test extends Application {
 					PixelWriter image_writer = newImage.getPixelWriter();
 			
 					//Iterate over all pixels
-					for(int j = 0; j < newWidth -1; j++) {
-						for(int i = 0; i < newHeight -1; i++) {
+					for(int j = 0; j < newWidth; j++) {
+						for(int i = 0; i < newHeight; i++) {
 
-								
+								while(decimal < 1){
+									
+									decimal = (float) (decimal + 0.1);
+									float x = (j * oldWidth/newWidth);
+									float y = (i * oldHeight/newHeight);
 
-								int x = (int) (j * oldWidth/newWidth);
-								int y = (int) (i * oldHeight/newHeight);
+									if ((x <= 254) && (y <=254)){
+										val= grey[76][(int) x][(int) y];
+										val2 = grey[76][(int)x+1][(int)y];
+										val3= grey[76][(int)x][(int)y+1];
+										val4 = grey[76][(int)x+1][(int)y+1];
 
-								val= grey[76][x][y];
-								val2 = grey[76][x][y+1];
-								val3 = grey[76][x+1][y];
-								val4 = grey[76][x+1][y+1];
 
-								float v = val + (val2 - val)*(((x + decimal) - x)/(x+1-x));
-								Color color=Color.color(v, v, v);
-								
-								//Apply the new colour
-								image_writer.setColor(i, j, color);
+										float v1 = val + (val2 - val)*(((x + decimal) - x)/(x+1-x));
+										float v2 = val3 + (val4 - val3)*(((x + decimal) - x)/(x+1-x));
+										float v = v1+ (v2 - v1)*(((y + decimal) - y)/(y+1-y));
+										if( v < 0){
+											v = 0;
+										}
+										if (v > 1){
+											v=1;
+										}
+										Color color=Color.color(v, v, v);
+										
+										//Apply the new colour
+										image_writer.setColor(i, j, color);
+									}
+								}
+								decimal = 0;
 							}
 						
 					}
