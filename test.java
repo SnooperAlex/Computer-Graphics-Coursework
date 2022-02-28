@@ -246,30 +246,57 @@ public class test extends Application {
 					float val2;
 					float val3;
 					float val4;
-					float decimal = 0;		
+					float decimalX = 0;		
+					float decimalY = 0;
+					int testx = 0;
+					float interval = 0;
 					//Get an interface to write to that image memory
 					PixelWriter image_writer = newImage.getPixelWriter();
-			
+
+					for(int i = 0; i < newWidth; i++){
+						float x = (i * oldWidth/newWidth);
+						if((int) x == testx){
+							interval += 1; 
+						}
+						else{
+							break;
+						}
+						testx = (int) x;
+					}
+					System.out.println(interval);
+					float deci = 1/interval;
+					System.out.println(deci);
 					//Iterate over all pixels
-					for(int j = 0; j < newWidth; j++) {
-						for(int i = 0; i < newHeight; i++) {
+					for(int j = 0; j < newHeight; j++) {
+						for(int i = 0; i < newWidth; i++) {
 
-								while(decimal < 1){
-									
-									decimal = (float) (decimal + 0.1);
 									float x = (j * oldWidth/newWidth);
+
 									float y = (i * oldHeight/newHeight);
-
+									
 									if ((x <= 254) && (y <=254)){
-										val= grey[76][(int) x][(int) y];
-										val2 = grey[76][(int)x+1][(int)y];
-										val3= grey[76][(int)x][(int)y+1];
-										val4 = grey[76][(int)x+1][(int)y+1];
+										
+										int ax = (int) Math.floor(x);
+										int ay = (int) Math.floor(y);
+										int bx = (int) Math.floor(x)+1;
+										int by = (int) Math.floor(y);
+										int cx = (int) Math.floor(x);
+										int cy = (int) Math.floor(y)+1;
+										int dx = (int) Math.floor(x)+1 ;
+										int dy = (int) Math.floor(y)+1;
+
+										val= grey[76][ax][ay];
+										val2 = grey[76][bx][by];
+										val3= grey[76][cx][cy];
+										val4 = grey[76][dx][dy];
+	
 
 
-										float v1 = val + (val2 - val)*(((x + decimal) - x)/(x+1-x));
-										float v2 = val3 + (val4 - val3)*(((x + decimal) - x)/(x+1-x));
-										float v = v1+ (v2 - v1)*(((y + decimal) - y)/(y+1-y));
+										float v1 = val + (val2 - val)*((x - ax)/(bx-ax));
+										float v2 = val3 + (val4 - val3)*((x - ax)/(bx-ax));
+
+										float v = v1+ (v2 - v1)*((y - ay)/(cy-ay));
+
 										if( v < 0){
 											v = 0;
 										}
@@ -280,11 +307,12 @@ public class test extends Application {
 										
 										//Apply the new colour
 										image_writer.setColor(i, j, color);
+
 									}
-								}
-								decimal = 0;
-							}
+
+						}
 						
+													
 					}
 					return newImage;
 				}		
@@ -296,7 +324,13 @@ public class test extends Application {
 				float Width = (int)size;
 			    float Height = (int)size;
 			    float val;
-		
+				float[] lookup = new float[255];
+
+				for (int x = 0; x < 256; x++){
+
+					float result = (float) Math.pow(x, 1.0/value);
+					lookup[x] = result;
+				}
 				//Get an interface to write to that image memory
 				PixelWriter image_writer = newImage.getPixelWriter();
 		
@@ -307,11 +341,9 @@ public class test extends Application {
 
 						val = grey[76][y][x];
 
-						float power = (float) Math.pow(val, 1.0/value);
-			
 
-						Color color=Color.color(power, power, power);
-						
+						Color color=Color.color(val, val, val);
+						System.out.println("wtf");
 						//Apply the new colour
 						image_writer.setColor(x, y, color);
 					}
