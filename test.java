@@ -12,9 +12,10 @@ All of those functions must be written by yourself
 You may use libraries / IDE to achieve a better GUI
 */
 import java.io.*;
+import java.util.TooManyListenersException;
+
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
@@ -23,27 +24,35 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Toggle;
 //import javafx.scene.control.Label;
-import javafx.scene.control.Button;
 import javafx.scene.control.RadioButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;  
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.PixelWriter;
-import javafx.scene.image.PixelReader;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class test extends Application {
 	short cthead[][][]; //store the 3D volume data set
 	float grey[][][]; //store the 3D volume data set converted to 0-1 ready to copy to the image
+	float[] lookup = new float[256];
 	short min, max; //min/max value in the 3D volume data set
 	ImageView TopView;
 	int currentNum = 76;
 	double currentSize = 256;
 	double currentGamma = 1;
+	int origHeight = 256;
+	int origWidth = 256;
+
 
     @Override
     public void start(Stage stage) throws FileNotFoundException {
+		//create the first lookup table
+		for (int x = 0; x < 256; x++){
+			double result =  Math.pow(x/255.0, 1.0/currentGamma);
+			lookup[x] = (float) result;
+		}
+
 		stage.setTitle("CThead Viewer");
 		
 		try {
@@ -94,15 +103,15 @@ public class test extends Application {
 
 				System.out.println(newValue.intValue());
 				//Here's the basic code you need to update an image
-				TopView.setImage(null); //clear the old image
-		        Image newImage = GetSlice(); //go get the slice image
+				 //clear the old image
+				TopView.setImage(null); //go get the slice image
 				Image thenewImage;
 				currentSize = szslider.getValue();
 				if (rb1.isSelected()){
-					thenewImage = resize(currentSize, newImage, currentGamma);
+					thenewImage = resize(currentSize, currentGamma);
 				}
 				else{
-					thenewImage = bilinear(currentSize, newImage);
+					thenewImage = bilinear(currentSize);
 				}
 				TopView.setImage(thenewImage); //Update the GUI so the new image is displayed
 				
@@ -116,9 +125,14 @@ public class test extends Application {
 
 				System.out.println(newValue.doubleValue());
 				setGamma(gamma_slider.getValue());
-				Image newImage = TopView.getImage(); //go get the slice image
-				System.out.println(currentSize);
-				Image thenewImage = resize(currentSize, newImage, currentGamma);
+				gammaTable(getGamma());
+				Image thenewImage;
+				if (rb1.isSelected()){
+					thenewImage = resize(currentSize, currentGamma);
+				}
+				else{
+					thenewImage = bilinear(currentSize);
+				}
 				TopView.setImage(thenewImage);
 			}
 		});
@@ -203,153 +217,111 @@ public class test extends Application {
 		return image;
 		}
 	
-		public Image resize(double value, Image oldImage, double gamma){
-			WritableImage newImage = new WritableImage((int) value, (int) value);
-				//Find the width and height of the image to be process
-				float oldWidth = (int)oldImage.getWidth();
-			    float oldHeight = (int)oldImage.getHeight();
-				float newWidth = (int) value;
-				float newHeight = (int) value;
-			    float val;
-		
-				//Get an interface to write to that image memory
-				PixelWriter image_writer = newImage.getPixelWriter();
-		
-				//Iterate over all pixels
-				for(int j = 0; j < newWidth; j++) {
-					for(int i = 0; i < newHeight; i++) {
-						//For each pixel, get the colour from the cthead slice 76
-		
-						int x = (int) (j * oldWidth/newWidth);
-						int y = (int) (i * oldHeight/newHeight);
-						val=grey[getNum()][y][x];
+	public Image resize(double value, double gamma){
+		WritableImage newImage = new WritableImage((int) value, (int) value);
+		//Find the width and height of the image to be process
 
-						float power = (float) Math.pow(val, 1.0/gamma);
+		float newWidth = (int) value;
+		float newHeight = (int) value;
+		float val;
 
-						Color color=Color.color(power,power,power);
-						
-						//Apply the new colour
-						image_writer.setColor(j, i, color);
-					}
-				}
-				System.out.println(getNum());
-				return newImage;
+		//Get an interface to write to that image memory
+		PixelWriter image_writer = newImage.getPixelWriter();
+
+		//Iterate over all pixels
+		for(int j = 0; j < newWidth; j++) {
+			for(int i = 0; i < newHeight; i++) {
+
+
+				int x = (int) (j * origWidth/newWidth);
+				int y = (int) (i * origHeight/newHeight);
+
+				val = grey[getNum()][y][x];
+
+				val = gammaChange(val, 256);
+
+				Color color=Color.color(val, val, val);
+				
+				//Apply the new colour
+				image_writer.setColor(j, i, color);
 			}
-		public Image bilinear(double value, Image oldImage){
-				WritableImage newImage = new WritableImage((int) value, (int) value);
-					//Find the width and height of the image to be process
-					float oldWidth = (int)oldImage.getWidth();
-					float oldHeight = (int)oldImage.getHeight();
-					float newWidth = (int) value;
-					float newHeight = (int) value;
-					float val;
-					float val2;
-					float val3;
-					float val4;
-					float decimalX = 0;		
-					float decimalY = 0;
-					int testx = 0;
-					float interval = 0;
-					//Get an interface to write to that image memory
-					PixelWriter image_writer = newImage.getPixelWriter();
+		}
+		return newImage;
+		}
 
-					for(int i = 0; i < newWidth; i++){
-						float x = (i * oldWidth/newWidth);
-						if((int) x == testx){
-							interval += 1; 
-						}
-						else{
-							break;
-						}
-						testx = (int) x;
+	public Image bilinear(double value){
+		WritableImage newImage = new WritableImage((int) value, (int) value);
+
+		//Find the width and height of the image to be process
+		float newWidth = (int) value;
+		float newHeight = (int) value;
+		float val;
+		float val2;
+		float val3;
+		float val4;
+
+		//Get an interface to write to that image memory
+		PixelWriter image_writer = newImage.getPixelWriter();
+
+		for(int j = 0; j < newHeight; j++) {
+			for(int i = 0; i < newWidth; i++) {
+
+				float x = (j * origWidth/newWidth);
+				float y = (i * origHeight/newHeight);
+				
+				if ((x <= 254) && (y <=254)){
+					
+					int ax = (int) Math.floor(x);
+					int ay = (int) Math.floor(y);
+					int bx = (int) Math.floor(x)+1;
+					int by = (int) Math.floor(y);
+					int cx = (int) Math.floor(x);
+					int cy = (int) Math.floor(y)+1;
+					int dx = (int) Math.floor(x)+1 ;
+					int dy = (int) Math.floor(y)+1;
+
+					val= grey[getNum()][ax][ay];
+					val2 = grey[getNum()][bx][by];
+					val3= grey[getNum()][cx][cy];
+					val4 = grey[getNum()][dx][dy];
+
+					float v1 = val + (val2 - val)*((x - ax)/(bx-ax));
+					float v2 = val3 + (val4 - val3)*((x - ax)/(bx-ax));
+					float v = v1+ (v2 - v1)*((y - ay)/(cy-ay));
+
+					if( v < 0){
+						v = 0;
 					}
-					System.out.println(interval);
-					float deci = 1/interval;
-					System.out.println(deci);
-					//Iterate over all pixels
-					for(int j = 0; j < newHeight; j++) {
-						for(int i = 0; i < newWidth; i++) {
-
-									float x = (j * oldWidth/newWidth);
-
-									float y = (i * oldHeight/newHeight);
-									
-									if ((x <= 254) && (y <=254)){
-										
-										int ax = (int) Math.floor(x);
-										int ay = (int) Math.floor(y);
-										int bx = (int) Math.floor(x)+1;
-										int by = (int) Math.floor(y);
-										int cx = (int) Math.floor(x);
-										int cy = (int) Math.floor(y)+1;
-										int dx = (int) Math.floor(x)+1 ;
-										int dy = (int) Math.floor(y)+1;
-
-										val= grey[76][ax][ay];
-										val2 = grey[76][bx][by];
-										val3= grey[76][cx][cy];
-										val4 = grey[76][dx][dy];
-	
-
-
-										float v1 = val + (val2 - val)*((x - ax)/(bx-ax));
-										float v2 = val3 + (val4 - val3)*((x - ax)/(bx-ax));
-
-										float v = v1+ (v2 - v1)*((y - ay)/(cy-ay));
-
-										if( v < 0){
-											v = 0;
-										}
-										if (v > 1){
-											v=1;
-										}
-										Color color=Color.color(v, v, v);
-										
-										//Apply the new colour
-										image_writer.setColor(i, j, color);
-
-									}
-
-						}
-						
-													
+					if (v > 1){
+						v=1;
 					}
-					return newImage;
-				}		
+
+					v = gammaChange(v, 256);
+
+					Color color=Color.color(v, v, v);
+					
+					//Apply the new colour
+					image_writer.setColor(i, j, color);
+
+				}
+			}															
+		}
+		return newImage;
+	}		
 			
 	
-	public Image gammaChange(double value, Image Image, double size){
-			WritableImage newImage = new WritableImage((int) size, (int) size);
-				//Find the width and height of the image to be process
-				float Width = (int)size;
-			    float Height = (int)size;
-			    float val;
-				float[] lookup = new float[255];
-
-				for (int x = 0; x < 256; x++){
-
-					float result = (float) Math.pow(x, 1.0/value);
-					lookup[x] = result;
-				}
-				//Get an interface to write to that image memory
-				PixelWriter image_writer = newImage.getPixelWriter();
-		
-				//Iterate over all pixels
-				for(int y = 0; y < Width; y++) {
-					for(int x = 0; x < Height; x++) {
-						//For each pixel, get the colour from the cthead slice 76
-
-						val = grey[76][y][x];
-
-
-						Color color=Color.color(val, val, val);
-						System.out.println("wtf");
-						//Apply the new colour
-						image_writer.setColor(x, y, color);
-					}
-				}
-				return newImage;
+	public float gammaChange(double value, double size){
+			
+			float col = lookup[(int) Math.floor(value * 255)];	
+			return col;										
 			}
+	
+	public void gammaTable(double gamma){
+		for (int x = 0; x < 256; x++){
+			double result =  Math.pow(x/255.0, 1.0/gamma);
+			lookup[x] = (float) result;
+		}
+	}
 	
 	public void ThumbWindow(double atX, double atY) {
 		StackPane ThumbLayout = new StackPane();
@@ -360,16 +332,14 @@ public class test extends Application {
 		float val;
 
 		{
-			//This bit of code makes a white image
+			
 			PixelWriter image_writer = thumb_image.getPixelWriter();
 
 			for(int y = 0; y < thumb_image.getHeight(); y++) {
 				for(int x = 0; x < thumb_image.getWidth(); x++) {
 							Color color=Color.color(1,1,1);
-							//Apply the new colour
-							image_writer.setColor(x, y, color);
-					//Apply the new colour
-					
+						
+							image_writer.setColor(x, y, color);					
 				}
 			}
 			int nextX = 0;
@@ -389,7 +359,7 @@ public class test extends Application {
 						
 						//Apply the new colour
 						image_writer.setColor(j+nextX, i+nextY, color);
-						//Apply the new colour
+						
 						
 					}
 				}				
@@ -408,7 +378,7 @@ public class test extends Application {
 			int z = (int) (m + (n * 11 + n));
 			System.out.println(m + " "+ n);
 			setNum(z);
-			TopView.setImage(changeImage(z));
+			TopView.setImage(resize(currentSize, currentGamma));
 			
 		});
 	
@@ -424,27 +394,7 @@ public class test extends Application {
 		newWindow.show();
 	}
 
-	public Image changeImage(int z) {
-		WritableImage image = new WritableImage(256, 256);
-		//Find the width and height of the image to be process
-		int width = (int)image.getWidth();
-		int height = (int)image.getHeight();
-		float val;
-		//Get an interface to write to that image memory
-		PixelWriter image_writer = image.getPixelWriter();
-		//Iterate over all pixels
-		for(int y = 0; y < height; y++) {
-			for(int x = 0; x < width; x++) {
-		//For each pixel, get the colour from the cthead slice 76
-				val=grey[z][y][x];
-				Color color=Color.color(val,val,val);
-		//Apply the new colour
-				image_writer.setColor(x, y, color);
-				}
-			}
-		return image;
-		}
-	
+
 		public void setNum(int currentNum){
 			this.currentNum = currentNum;
 		}
